@@ -1,4 +1,4 @@
-# Carnival Target Shooting — Lab 9
+# Carnival Target Shooting — Labs 9 and 10
 
 
 ## Run the game
@@ -16,6 +16,47 @@ The game has a black background and uses art I made being `Ship.png` for the
 player, `Shoot.png` for bullets, and `Enemypng.png` for all three target types.
 Targets move horizontally, bounce at the screen edges, and return one second
 after a hit. They do not shoot back. There is no time limit or game-over screen.
+
+## Save and load (Lab 10)
+
+Press **S** to save and **L** to load. A message confirms the result.
+There is one save slot, so saving again replaces it. Files persist after you
+stop Play mode or close the game. Pressing **R** does not erase the saved game.
+
+- `score.bin`: score stored as a four-byte integer using `BinaryWriter`,
+  loaded using `BinaryReader`.
+- `positions.json`: player and all three enemy positions, IDs, and visibility,
+  written and read with Unity's built-in `JsonUtility`.
+
+Both files are stored in `Application.persistentDataPath`. Saving prints the
+full folder path in Unity's Console. No extra JSON package is needed.
+
+`ISaveable` defines `SaveID`, `SavedData`, and `LoadFromData()`, following the
+structure in the Week 10 slides. `TransformSaver` implements this interface
+and captures/restores an object's position. `CarnivalGame` attaches it to the
+player and each enemy with stable IDs (`player`, `enemy-0`, `enemy-1`, `enemy-2`).
+`SavingService` saves those objects through the interface and matches IDs on
+load, so object ordering and restarting the game do not change the mapping.
+The score is saved separately in binary format.
+
+Loading clears bullets in flight and restores ammo to 10; bullet positions,
+ammo, enemy movement direction, and scenes are not saved. An enemy hidden at
+save time is restored hidden and respawns after one second. All enemy positions
+are included even if an enemy was temporarily hidden. Missing or invalid save
+data shows a message without applying a partial load.
+
+### Quick verification
+
+1. Hit a few enemies, move the ship, and press **S**. Note the score and positions.
+2. Move somewhere else, score more points, then press **L**.
+3. Confirm the saved score and positions return (enemies immediately resume moving).
+4. Stop and restart Play mode, then press **L** to verify persistence.
+5. Inspect `positions.json` and confirm that `score.bin` is four bytes.
+
+**Tools > Check Save and Load** runs automated editor checks using isolated
+temporary files. It checks missing files, formats, all four positions, stable
+IDs after recreating objects, visibility, overwriting, and invalid files.
+It does not touch your actual game save.
 
 ## Design patterns
 
@@ -60,6 +101,9 @@ reads the resulting score for the display.
 - `TargetBuilder`: step-by-step target construction.
 - `Target`: movement, hit event, and delayed respawn.
 - `ScoreManager`: observes target hits and tracks points.
+- `ISaveable`: contract for capturing and restoring saved objects.
+- `TransformSaver`: saves and loads a player or enemy's position and visibility.
+- `SavingService`: writes and reads the binary score and JSON position files.
 
 The scene's **Carnival Game** object already has all three image references.
 The ship, pool, and targets are created when Play starts; no prefab setup is needed.

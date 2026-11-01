@@ -12,6 +12,9 @@ public class CarnivalGame : MonoBehaviour
     private Target[] targets;
     private float nextShot;
     private GUIStyle label;
+    private SavingService saving;
+    private string saveMessage = "";
+    private float messageUntil;
 
     private Sprite MakeSprite(Texture2D image)
     {
@@ -47,12 +50,40 @@ public class CarnivalGame : MonoBehaviour
                 .Build("Small - 30 points", new Vector3(3, 3f, 0), transform)
         };
         foreach (Target target in targets) score.Observe(target);
+
+        // Register all four objects, including targets that may later be inactive.
+        var saveables = new ISaveable[targets.Length + 1];
+        var playerSaver = player.gameObject.AddComponent<TransformSaver>();
+        playerSaver.Initialize("player");
+        saveables[0] = playerSaver;
+        for (int i = 0; i < targets.Length; i++)
+        {
+            var saver = targets[i].gameObject.AddComponent<TransformSaver>();
+            saver.Initialize("enemy-" + i);
+            saveables[i + 1] = saver;
+        }
+        saving = new SavingService(saveables, score, Application.persistentDataPath);
     }
 
     private void Update()
     {
         Keyboard keyboard = Keyboard.current;
         if (keyboard == null) return;
+        if (keyboard.sKey.wasPressedThisFrame)
+        {
+            saving.SaveGame(out saveMessage);
+            messageUntil = Time.time + 4f;
+        }
+        if (keyboard.lKey.wasPressedThisFrame)
+        {
+            if (saving.LoadGame(out saveMessage))
+            {
+                pool.Reset(); // Bullet locations are deliberately not saved.
+                nextShot = Time.time + 0.18f;
+            }
+            messageUntil = Time.time + 4f;
+            return;
+        }
         float move = 0;
         if (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed) move--;
         if (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed) move++;
@@ -84,6 +115,9 @@ public class CarnivalGame : MonoBehaviour
         GUI.Label(new Rect(15, 40, 450, 30), "Ammo: " + pool.Ammo + " / " + pool.Capacity, label);
         if (pool.Ammo == 0 && pool.ActiveCount == 0)
             GUI.Label(new Rect(15, 70, 450, 30), "Out of ammo! Press R to restart.", label);
+        if (Time.time < messageUntil)
+            GUI.Label(new Rect(15, 100, Screen.width - 30, 30), saveMessage, label);
+        GUI.Label(new Rect(15, Screen.height - 88, Screen.width, 30), "S: save    L: load", label);
         GUI.Label(new Rect(15, Screen.height - 60, Screen.width, 30), "A/D or arrows: move    Space: shoot    R: reset", label);
         GUI.Label(new Rect(15, Screen.height - 32, Screen.width, 30), "Large: 10 points    Medium: 20    Small: 30", label);
     }

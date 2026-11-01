@@ -39,6 +39,14 @@ public class Target : MonoBehaviour
 
     private void Respawn() { gameObject.SetActive(true); }
 
+    public void RestoreVisibility(bool active)
+    {
+        // Remove an old respawn timer before restoring the saved state.
+        CancelInvoke();
+        gameObject.SetActive(active);
+        if (!active) Invoke(nameof(Respawn), 1f);
+    }
+
     public void ResetTarget()
     {
         CancelInvoke();

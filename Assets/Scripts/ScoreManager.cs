@@ -16,6 +16,7 @@ public class ScoreManager : MonoBehaviour
 
     private void AddPoints(int points) { Score += points; }
     public void ResetScore() { Score = 0; }
+    public void RestoreScore(int savedScore) { Score = savedScore; }
 
     private void OnDestroy()
     {
